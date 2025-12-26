@@ -18,7 +18,7 @@ const Summary = () => {
         (team) => team.teamName === team1 || team.teamName === team2
       );
 
-      navigate("/scoreboard", {
+      navigate("scoreboard/scoreboard", {
         state: {
           teams: selectedTeams,
           timePerQuarter: formData.timePerQuarter,

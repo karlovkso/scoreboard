@@ -5,7 +5,7 @@ const Home = () => {
   const navigate = useNavigate();
 
   const goToSetup = () => {
-    navigate("/setup");
+    navigate("scoreboard/setup");
   };
 
   return (

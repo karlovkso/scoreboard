@@ -46,7 +46,7 @@ const Setup = () => {
   };
 
   const handleButtonClick = () => {
-    navigate("/summary", { state: formData });
+    navigate("scoreboard/summary", { state: formData });
   };
 
   return (

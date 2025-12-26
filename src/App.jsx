@@ -7,7 +7,7 @@ import Scoreboard from "./pages/Scoreboard";
 
 const App = () => {
   return (
-    <Router>
+    <Router basename="/scoreboard/">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/setup" element={<Setup />} />
