@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
+import buzzer from "../assets/buzzer.mp3";
 
 const MATCH_KEY = "match_history";
 const SETUP_KEY = "setup_data";
@@ -164,6 +165,12 @@ const Scoreboard = () => {
     setPeriod(Math.min(Math.max(val, 1), TOTAL_PERIODS));
   };
 
+  const handleBuzzer = () => {
+    const audio = new Audio(buzzer);
+    audio.volume = 1.0;
+    audio.play().catch((err) => console.error("Error playing sound:", err));
+  };
+
   return (
     <div className="container-fluid mt-4 mb-3 px-4">
       <div className="d-flex gap-2">
@@ -312,7 +319,10 @@ const Scoreboard = () => {
 
                 <div className="d-flex justify-content-center gap-2 mt-2">
                   <button className="btn btn-danger">
-                    <i className="fa-solid fa-bullhorn"></i>
+                    <i
+                      className="fa-solid fa-bullhorn"
+                      onClick={handleBuzzer}
+                    ></i>
                   </button>
                   <button className="btn btn-warning" onClick={togglePause}>
                     {isRunning ? (
