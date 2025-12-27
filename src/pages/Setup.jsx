@@ -1,7 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+const STORAGE_KEY = "setup_data";
+
 const Setup = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     teamNumber: "",
     teams: [],
@@ -11,147 +15,156 @@ const Setup = () => {
     playerFouls: "",
   });
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      setFormData(JSON.parse(saved));
+    }
+  }, []);
+
+  const persist = (data) => {
+    setFormData(data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  };
 
   const handleTeamNumberChange = (e) => {
     const number = parseInt(e.target.value) || 0;
-    setFormData((prev) => {
-      const newTeams = [...prev.teams];
-      while (newTeams.length < number) {
-        newTeams.push({
-          teamName: "",
-          teamColor: "#000000",
-          teamPlayerNames: "",
-        });
-      }
-      while (newTeams.length > number) {
-        newTeams.pop();
-      }
-      return { ...prev, teamNumber: e.target.value, teams: newTeams };
-    });
+
+    persist(
+      ((prev) => {
+        const teams = [...prev.teams];
+        while (teams.length < number) {
+          teams.push({
+            teamName: "",
+            teamColor: "#000000",
+            teamPlayerNames: "",
+          });
+        }
+        while (teams.length > number) {
+          teams.pop();
+        }
+        return { ...prev, teamNumber: e.target.value, teams };
+      })(formData)
+    );
   };
 
   const handleTeamChange = (index, e) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      const newTeams = [...prev.teams];
-      newTeams[index] = { ...newTeams[index], [name]: value };
-      return { ...prev, teams: newTeams };
-    });
+    const teams = [...formData.teams];
+    teams[index] = { ...teams[index], [name]: value };
+    persist({ ...formData, teams });
   };
 
   const handleOtherChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    persist({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleButtonClick = () => {
-    navigate("/summary", { state: formData });
+  const handleContinue = () => {
+    navigate("/summary");
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-3 mb-3">
+      <button
+        className="std-btn btn btn-info mb-3 fw-bold"
+        onClick={() => navigate("/")}
+      >
+        GO TO HOME
+      </button>
+
+      <div className="row">
+        <div className="col-md-6 mb-3">
+          <label className="form-label">Time per Quarter</label>
+          <input
+            className="form-control"
+            placeholder="Time per Quarter"
+            name="timePerQuarter"
+            value={formData.timePerQuarter}
+            onChange={handleOtherChange}
+          />
+        </div>
+
+        <div className="col-md-6 mb-3">
+          <label className="form-label">Timeout Duration</label>
+          <input
+            className="form-control"
+            placeholder="Timeout Duration"
+            name="timeoutDuration"
+            value={formData.timeoutDuration}
+            onChange={handleOtherChange}
+          />
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-6 mb-3">
+          <label className="form-label">Team Fouls</label>
+          <input
+            className="form-control"
+            placeholder="Team Fouls"
+            name="teamFouls"
+            value={formData.teamFouls}
+            onChange={handleOtherChange}
+          />
+        </div>
+
+        <div className="col-md-6 mb-3">
+          <label className="form-label">Player Fouls</label>
+          <input
+            className="form-control"
+            placeholder="Player Fouls"
+            name="playerFouls"
+            value={formData.playerFouls}
+            onChange={handleOtherChange}
+          />
+        </div>
+      </div>
+
       <div className="mb-3">
-        <label className="form-label">Number of Teams:</label>
+        <label className="form-label">Number of Teams</label>
         <input
           type="number"
           className="form-control"
           value={formData.teamNumber}
-          onChange={handleTeamNumberChange}
-          placeholder="Enter number of teams"
           min={1}
+          onChange={handleTeamNumberChange}
         />
       </div>
 
       {formData.teams.map((team, index) => (
         <div key={index} className="border p-3 mb-3 rounded">
           <h5>Team {index + 1}</h5>
-          <div className="mb-2">
-            <label className="form-label">Team Name:</label>
-            <input
-              type="text"
-              className="form-control"
-              name="teamName"
-              value={team.teamName}
-              onChange={(e) => handleTeamChange(index, e)}
-              placeholder="Enter team name"
-            />
-          </div>
-          <div className="mb-2">
-            <label className="form-label">Team Color:</label>
-            <input
-              type="color"
-              className="form-control form-control-color"
-              name="teamColor"
-              value={team.teamColor || "#000000"}
-              onChange={(e) => handleTeamChange(index, e)}
-            />
-          </div>
-          <div className="mb-2">
-            <label className="form-label">
-              Player Names (comma separated):
-            </label>
-            <input
-              type="text"
-              className="form-control"
-              name="teamPlayerNames"
-              value={team.teamPlayerNames}
-              onChange={(e) => handleTeamChange(index, e)}
-              placeholder="Enter player names"
-            />
-          </div>
+
+          <input
+            className="form-control mb-2"
+            placeholder="Team Name"
+            name="teamName"
+            value={team.teamName}
+            onChange={(e) => handleTeamChange(index, e)}
+          />
+
+          <input
+            type="color"
+            className="form-control form-control-color mb-2"
+            name="teamColor"
+            value={team.teamColor}
+            onChange={(e) => handleTeamChange(index, e)}
+          />
+
+          <input
+            className="form-control"
+            placeholder="Player Names"
+            name="teamPlayerNames"
+            value={team.teamPlayerNames}
+            onChange={(e) => handleTeamChange(index, e)}
+          />
         </div>
       ))}
 
-      <div className="mb-3">
-        <label className="form-label">Time per Quarter (minutes):</label>
-        <input
-          type="number"
-          className="form-control"
-          name="timePerQuarter"
-          value={formData.timePerQuarter}
-          onChange={handleOtherChange}
-          placeholder="Minutes"
-        />
-      </div>
-
-      <div className="mb-3">
-        <label className="form-label">Timeout Duration (seconds):</label>
-        <input
-          type="number"
-          className="form-control"
-          name="timeoutDuration"
-          value={formData.timeoutDuration}
-          onChange={handleOtherChange}
-          placeholder="Seconds"
-        />
-      </div>
-
-      <div className="mb-3">
-        <label className="form-label">Team Fouls:</label>
-        <input
-          type="number"
-          className="form-control"
-          name="teamFouls"
-          value={formData.teamFouls}
-          onChange={handleOtherChange}
-          placeholder="Enter number of team fouls"
-        />
-      </div>
-
-      <div className="mb-3">
-        <label className="form-label">Player Fouls:</label>
-        <input
-          type="number"
-          className="form-control"
-          name="playerFouls"
-          value={formData.playerFouls}
-          onChange={handleOtherChange}
-          placeholder="Enter number of player fouls"
-        />
-      </div>
-
-      <button className="std-btn btn btn-info" onClick={handleButtonClick}>
+      <button
+        className="std-btn btn btn-info fw-bold w-100"
+        onClick={handleContinue}
+      >
         CONTINUE
       </button>
     </div>

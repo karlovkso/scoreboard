@@ -1,84 +1,170 @@
-import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+const STORAGE_KEY = "match_history";
 
 const Summary = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const formData = location.state;
+  const storedData = localStorage.getItem("setup_data");
+  const formData = storedData ? JSON.parse(storedData) : null;
 
   const [showModal, setShowModal] = useState(false);
   const [team1, setTeam1] = useState("");
   const [team2, setTeam2] = useState("");
+  const [matchHistory, setMatchHistory] = useState([]);
 
-  if (!formData) return <p>No data available</p>;
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(STORAGE_KEY);
+    if (savedHistory) {
+      setMatchHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
+  const saveMatchHistory = (history) => {
+    setMatchHistory(history);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  };
 
   const handleStartGame = () => {
-    if (team1 && team2 && team1 !== team2) {
-      const selectedTeams = formData.teams.filter(
-        (team) => team.teamName === team1 || team.teamName === team2
-      );
-
-      navigate("/scoreboard", {
-        state: {
-          teams: selectedTeams,
-          timePerQuarter: formData.timePerQuarter,
-          timeoutDuration: formData.timeoutDuration,
-          teamFouls: formData.teamFouls,
-          playerFouls: formData.playerFouls,
-        },
-      });
-    } else {
+    if (!team1 || !team2 || team1 === team2) {
       alert("Please select two different teams.");
+      return;
     }
+
+    const selectedTeams = formData.teams.filter(
+      (team) => team.teamName === team1 || team.teamName === team2
+    );
+
+    const newMatch = {
+      team1,
+      team2,
+      score1: 0,
+      score2: 0,
+      winner: null,
+      date: new Date().toLocaleString(),
+    };
+
+    const updatedHistory = [...matchHistory, newMatch];
+    saveMatchHistory(updatedHistory);
+
+    navigate("/scoreboard", {
+      state: {
+        teams: selectedTeams,
+        timePerQuarter: formData.timePerQuarter,
+        timeoutDuration: formData.timeoutDuration,
+        teamFouls: formData.teamFouls,
+        playerFouls: formData.playerFouls,
+        matchIndex: updatedHistory.length - 1,
+      },
+    });
+  };
+
+  const handleHistoryClick = (index) => {
+    const match = matchHistory[index];
+    const selectedTeams = formData.teams.filter(
+      (team) => team.teamName === match.team1 || team.teamName === match.team2
+    );
+
+    navigate("/scoreboard", {
+      state: {
+        teams: selectedTeams,
+        timePerQuarter: formData.timePerQuarter,
+        timeoutDuration: formData.timeoutDuration,
+        teamFouls: formData.teamFouls,
+        playerFouls: formData.playerFouls,
+        matchIndex: index,
+      },
+    });
   };
 
   return (
-    <div className="container mt-4">
-      <p>
-        <strong>Number of Teams:</strong> {formData.teamNumber}
-      </p>
-      <p>
-        <strong>Time per Quarter:</strong> {formData.timePerQuarter} minutes
-      </p>
-      <p>
-        <strong>Timeout Duration:</strong> {formData.timeoutDuration} seconds
-      </p>
-      <p>
-        <strong>Team Fouls:</strong> {formData.teamFouls}
-      </p>
-      <p>
-        <strong>Player Fouls:</strong> {formData.playerFouls}
-      </p>
+    <div className="container mt-3 mb-3 position-relative">
+      <button
+        className="std-btn btn btn-info mb-3 fw-bold"
+        onClick={() => navigate("/setup")}
+      >
+        GO TO SETUP
+      </button>
 
+      {/* Game Summary */}
+      <div className="row mb-2">
+        <div className="col-md-4">
+          <p>
+            <strong>Number of Teams:</strong> {formData.teamNumber}
+          </p>
+        </div>
+        <div className="col-md-4">
+          <p>
+            <strong>Time per Quarter:</strong> {formData.timePerQuarter} minutes
+          </p>
+        </div>
+        <div className="col-md-4">
+          <p>
+            <strong>Timeout Duration:</strong> {formData.timeoutDuration}{" "}
+            seconds
+          </p>
+        </div>
+        <div className="col-md-4">
+          <p>
+            <strong>Team Fouls:</strong> {formData.teamFouls}
+          </p>
+        </div>
+        <div className="col-md-4">
+          <p>
+            <strong>Player Fouls:</strong> {formData.playerFouls}
+          </p>
+        </div>
+      </div>
+
+      {/* Teams */}
       {formData.teams.map((team, index) => (
-        <div key={index} className="border p-3 mb-3 rounded">
-          <h5>Team {index + 1}</h5>
-          <p>
-            <strong>Name:</strong> {team.teamName}
-          </p>
-          <p>
-            <strong>Color:</strong>{" "}
-            <span
-              style={{
-                display: "inline-block",
-                width: "20px",
-                height: "20px",
-                backgroundColor: team.teamColor,
-                border: "1px solid #000",
-                verticalAlign: "middle",
-              }}
-            ></span>
-          </p>
+        <div
+          key={index}
+          className="p-3 mb-3 rounded"
+          style={{ backgroundColor: team.teamColor }}
+        >
+          <h5 className="fw-bold">{team.teamName}</h5>
           <p>
             <strong>Players:</strong> {team.teamPlayerNames}
           </p>
         </div>
       ))}
 
-      <button className="btn btn-success" onClick={() => setShowModal(true)}>
+      {/* Start Game Button */}
+      <button
+        className="std-success-btn btn btn-success fw-bold w-100"
+        onClick={() => setShowModal(true)}
+      >
         START GAME
       </button>
 
+      {/* Match History */}
+      {matchHistory.length > 0 && (
+        <div className="mt-4">
+          <h4 className="fw-bold">Match History</h4>
+          <ul className="list-group">
+            {matchHistory.map((match, index) => (
+              <li
+                key={index}
+                className="list-group-item list-group-item-action"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHistoryClick(index)}
+              >
+                <strong>{match.team1}</strong> ({match.score1}) vs{" "}
+                <strong>{match.team2}</strong> ({match.score2})
+                <br />
+                <span className="text-success">
+                  {match.winner ? `Winner: ${match.winner}` : "In Progress"}
+                </span>
+                <br />
+                <small className="text-muted">{match.date}</small>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Modal */}
       {showModal && (
         <div
           className="modal fade show"
@@ -96,7 +182,7 @@ const Summary = () => {
               </div>
               <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Team 1:</label>
+                  <label className="form-label">Team 1</label>
                   <select
                     className="form-select"
                     value={team1}
@@ -112,7 +198,7 @@ const Summary = () => {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Team 2:</label>
+                  <label className="form-label">Team 2</label>
                   <select
                     className="form-select"
                     value={team2}
