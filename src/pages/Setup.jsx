@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import FullscreenBtn from "../components/FullscreenBtn";
 
 const STORAGE_KEY = "setup_data";
 
@@ -66,12 +67,15 @@ const Setup = () => {
 
   return (
     <div className="container-fluid mt-4 mb-3 px-4">
-      <button
-        className="std-btn btn btn-info mb-3 fw-bold"
-        onClick={() => navigate("/")}
-      >
-        GO TO HOME
-      </button>
+      <div className="d-flex gap-2 mb-3">
+        <button
+          className="std-btn btn btn-info fw-bold"
+          onClick={() => navigate("/")}
+        >
+          GO TO HOME
+        </button>
+        <FullscreenBtn />
+      </div>
 
       <div className="row">
         <div className="col-md-4 mb-3">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import FullscreenBtn from "../components/FullscreenBtn";
 
 const STORAGE_KEY = "match_history";
 
@@ -80,13 +81,16 @@ const Summary = () => {
   };
 
   return (
-    <div className="container-fluid mt-4 mb-3 px-4 position-relative">
-      <button
-        className="std-btn btn btn-info mb-3 fw-bold"
-        onClick={() => navigate("/setup")}
-      >
-        GO TO SETUP
-      </button>
+    <div className="container-fluid mt-4 mb-3 px-4">
+      <div className="d-flex gap-2 mb-3">
+        <button
+          className="std-btn btn btn-info fw-bold"
+          onClick={() => navigate("/setup")}
+        >
+          GO TO SETUP
+        </button>
+        <FullscreenBtn />
+      </div>
 
       {/* Game Summary */}
       <p>
@@ -148,23 +152,26 @@ const Summary = () => {
         <div className="mt-4">
           <h4 className="fw-bold">MATCH HISTORY</h4>
           <ul className="list-group">
-            {matchHistory.map((match, index) => (
-              <li
-                key={index}
-                className="list-group-item list-group-item-action"
-                style={{ cursor: "pointer" }}
-                onClick={() => handleHistoryClick(index)}
-              >
-                <strong>{match.team1}</strong> ({match.score1}) vs{" "}
-                <strong>{match.team2}</strong> ({match.score2})
-                <br />
-                <span className="text-success">
-                  {match.winner ? `Winner: ${match.winner}` : "In Progress"}
-                </span>
-                <br />
-                <small className="text-muted">{match.date}</small>
-              </li>
-            ))}
+            {matchHistory
+              .slice()
+              .reverse()
+              .map((match, index) => (
+                <li
+                  key={index}
+                  className="list-group-item list-group-item-action"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleHistoryClick(index)}
+                >
+                  <strong>{match.team1}</strong> ({match.score1}) vs{" "}
+                  <strong>{match.team2}</strong> ({match.score2})
+                  <br />
+                  <span className="text-success">
+                    {match.winner ? `Winner: ${match.winner}` : "In Progress"}
+                  </span>
+                  <br />
+                  <small className="text-muted">{match.date}</small>
+                </li>
+              ))}
           </ul>
         </div>
       )}

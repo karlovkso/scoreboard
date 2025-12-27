@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import FullscreenBtn from "../components/FullscreenBtn";
 
 const MATCH_KEY = "match_history";
 const SETUP_KEY = "setup_data";
@@ -23,16 +24,16 @@ const Scoreboard = () => {
     {
       name: match.team1,
       score: match.score1,
-      color:
-        setup.teams.find((t) => t.teamName === match.team1)?.teamColor ||
-        "#000000",
+      color: setup.teams.find((t) => t.teamName === match.team1).teamColor,
+      fouls: setup.teamFouls,
+      timeouts: setup.timeoutPerQuarter,
     },
     {
       name: match.team2,
       score: match.score2,
-      color:
-        setup.teams.find((t) => t.teamName === match.team2)?.teamColor ||
-        "#000000",
+      color: setup.teams.find((t) => t.teamName === match.team2).teamColor,
+      fouls: setup.teamFouls,
+      timeouts: setup.timeoutPerQuarter,
     },
   ]);
 
@@ -40,7 +41,6 @@ const Scoreboard = () => {
   const [timeLeft, setTimeLeft] = useState(setup.timePerQuarter * 60);
   const [isRunning, setIsRunning] = useState(false);
   const timerRef = useRef(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
 
   useEffect(() => {
     if (isRunning) {
@@ -58,16 +58,6 @@ const Scoreboard = () => {
     }
     return () => clearInterval(timerRef.current);
   }, [isRunning]);
-
-  useEffect(() => {
-    const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullScreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullScreenChange);
-    };
-  }, []);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -138,22 +128,7 @@ const Scoreboard = () => {
         >
           GO TO SUMMARY
         </button>
-        <button
-          className="std-btn btn btn-info fw-bold"
-          onClick={() => {
-            if (!document.fullscreenElement) {
-              document.documentElement.requestFullscreen();
-            } else {
-              document.exitFullscreen();
-            }
-          }}
-        >
-          {isFullScreen ? (
-            <i className="fa-solid fa-compress"></i>
-          ) : (
-            <i className="fa-solid fa-expand"></i>
-          )}
-        </button>
+        <FullscreenBtn />
         <button className="btn btn-danger fw-bold" onClick={endGame}>
           END
         </button>
@@ -167,7 +142,7 @@ const Scoreboard = () => {
           suppressContentEditableWarning
           onBlur={handleTimerEdit}
           style={{
-            fontSize: "20rem",
+            fontSize: "25rem",
             border: "none",
             outline: "none",
           }}
@@ -179,7 +154,16 @@ const Scoreboard = () => {
         {scores.map((t, i) => (
           <React.Fragment key={i}>
             {/* Team */}
-            <div style={{ minWidth: "200px", flex: "1 1 200px" }}>
+            <div
+              style={{
+                minWidth: "200px",
+                flex: "1 1 200px",
+                borderColor: t.color,
+                borderWidth: "3px",
+                borderStyle: "solid",
+                borderRadius: "10px",
+              }}
+            >
               <h3
                 className="text-center m-0 fw-bold"
                 style={{
@@ -189,9 +173,14 @@ const Scoreboard = () => {
               >
                 {t.name}
               </h3>
-              <div className="text-center">
+              <div
+                className="text-center"
+                style={{
+                  padding: ".5rem",
+                }}
+              >
                 <h4
-                  className="fw-bold"
+                  className="fw-bold text-danger"
                   contentEditable
                   suppressContentEditableWarning
                   style={{
@@ -202,30 +191,84 @@ const Scoreboard = () => {
                 >
                   {t.score}
                 </h4>
-                <div className="d-flex justify-content-center flex-wrap gap-2">
-                  <button
-                    className="btn btn-success"
-                    onClick={() => updateScore(i, 1)}
-                  >
-                    +1
+                <div className="d-flex justify-content-between">
+                  <div className="d-flex gap-2 align-items-center">
+                    <h4
+                      className="fw-bold"
+                      style={{
+                        fontSize: "3rem",
+                      }}
+                    >
+                      FOULS:
+                    </h4>
+                    <h4
+                      className="fw-bold text-warning"
+                      contentEditable
+                      suppressContentEditableWarning
+                      style={{
+                        fontSize: "6rem",
+                        border: "none",
+                        outline: "none",
+                      }}
+                    >
+                      {t.fouls}
+                    </h4>
+                  </div>
+                  <div className="d-flex gap-2 align-items-center">
+                    <h4
+                      className="fw-bold"
+                      style={{
+                        fontSize: "3rem",
+                      }}
+                    >
+                      TIMEOUTS:
+                    </h4>
+                    <h4
+                      className="fw-bold text-warning"
+                      contentEditable
+                      suppressContentEditableWarning
+                      style={{
+                        fontSize: "6rem",
+                        border: "none",
+                        outline: "none",
+                      }}
+                    >
+                      {t.timeouts}
+                    </h4>
+                  </div>
+                </div>
+                <div className="justify-content-between d-flex">
+                  <button className="btn btn-outline-success fw-bold">
+                    TIMEOUT
                   </button>
-                  <button
-                    className="btn btn-success"
-                    onClick={() => updateScore(i, 2)}
-                  >
-                    +2
-                  </button>
-                  <button
-                    className="btn btn-success"
-                    onClick={() => updateScore(i, 3)}
-                  >
-                    +3
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => updateScore(i, -1)}
-                  >
-                    -1
+                  <div className="d-flex justify-content-center flex-wrap gap-2">
+                    <button
+                      className="btn btn-success"
+                      onClick={() => updateScore(i, 1)}
+                    >
+                      +1
+                    </button>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => updateScore(i, 2)}
+                    >
+                      +2
+                    </button>
+                    <button
+                      className="btn btn-success"
+                      onClick={() => updateScore(i, 3)}
+                    >
+                      +3
+                    </button>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => updateScore(i, -1)}
+                    >
+                      -1
+                    </button>
+                  </div>
+                  <button className="btn btn-outline-danger fw-bold">
+                    FOUL
                   </button>
                 </div>
               </div>
@@ -233,7 +276,7 @@ const Scoreboard = () => {
 
             {/* Insert period panel after first team */}
             {i === 0 && (
-              <div className="text-center" style={{ minWidth: "250px" }}>
+              <div className="text-center">
                 <h3 className="m-0 fw-bold">PERIOD</h3>
                 <h3
                   className="text-warning fw-bold"
