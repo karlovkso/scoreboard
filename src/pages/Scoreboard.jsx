@@ -50,7 +50,6 @@ const Scoreboard = () => {
   const [timeLeft, setTimeLeft] = useState(setup.timePerQuarter * 60);
   const [isRunning, setIsRunning] = useState(false);
 
-  /* ⏱ TIMEOUT STATE */
   const [timeoutLeft, setTimeoutLeft] = useState(0);
   const [activeTimeoutTeam, setActiveTimeoutTeam] = useState(null);
 
@@ -61,7 +60,6 @@ const Scoreboard = () => {
   const timerRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  /* GAME CLOCK */
   useEffect(() => {
     if (!isRunning) return;
 
@@ -80,7 +78,6 @@ const Scoreboard = () => {
     return () => clearInterval(timerRef.current);
   }, [isRunning]);
 
-  /* TIMEOUT CLOCK */
   useEffect(() => {
     if (timeoutLeft <= 0) return;
 
@@ -123,7 +120,6 @@ const Scoreboard = () => {
     );
   };
 
-  /* ⏸ TEAM TIMEOUT */
   const handleTimeout = (i) => {
     if (scores[i].timeouts === 0 || timeoutLeft > 0) return;
 
@@ -198,7 +194,7 @@ const Scoreboard = () => {
       clearInterval(timeoutRef.current);
       setTimeoutLeft(0);
       setActiveTimeoutTeam(null);
-      setIsRunning(false); // resume game clock if you want
+      setIsRunning(false);
     }
   };
 

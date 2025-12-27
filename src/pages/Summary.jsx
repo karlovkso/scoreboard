@@ -92,7 +92,6 @@ const Summary = () => {
         <FullscreenBtn />
       </div>
 
-      {/* Game Summary */}
       <p>
         <strong>NUMBER OF TEAMS:</strong> {formData.teamNumber}
       </p>
@@ -125,7 +124,6 @@ const Summary = () => {
         </div>
       </div>
 
-      {/* Teams */}
       {formData.teams.map((team, index) => (
         <div
           key={index}
@@ -139,7 +137,6 @@ const Summary = () => {
         </div>
       ))}
 
-      {/* Start Game Button */}
       <button
         className="std-success-btn btn btn-success fw-bold w-100"
         onClick={() => setShowModal(true)}
@@ -147,7 +144,6 @@ const Summary = () => {
         START GAME
       </button>
 
-      {/* Match History */}
       {matchHistory.length > 0 && (
         <div className="mt-4">
           <h4 className="fw-bold">MATCH HISTORY</h4>
@@ -176,7 +172,6 @@ const Summary = () => {
         </div>
       )}
 
-      {/* Modal */}
       {showModal && (
         <div
           className="modal fade show"
