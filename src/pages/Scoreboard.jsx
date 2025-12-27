@@ -48,30 +48,6 @@ const Scoreboard = () => {
   const timerRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  /* 🔊 BUZZER */
-  const buzzerRef = useRef(new Audio("./assets/buzzer.mp3"));
-  const buzzerUnlockedRef = useRef(false);
-
-  /* UNLOCK AUDIO ON FIRST USER CLICK */
-  useEffect(() => {
-    const unlockAudio = () => {
-      if (!buzzerUnlockedRef.current) {
-        buzzerRef.current
-          .play()
-          .then(() => {
-            buzzerRef.current.pause();
-            buzzerRef.current.currentTime = 0;
-            buzzerUnlockedRef.current = true;
-          })
-          .catch(() => {});
-      }
-      document.removeEventListener("click", unlockAudio);
-    };
-
-    document.addEventListener("click", unlockAudio);
-    return () => document.removeEventListener("click", unlockAudio);
-  }, []);
-
   /* GAME CLOCK */
   useEffect(() => {
     if (!isRunning) return;
@@ -143,20 +119,6 @@ const Scoreboard = () => {
     setScores((prev) =>
       prev.map((t, idx) => (idx === i ? { ...t, timeouts: t.timeouts - 1 } : t))
     );
-  };
-
-  /* 🔊 BUZZER BUTTON */
-  const handleBuzzer = () => {
-    try {
-      buzzerRef.current.currentTime = 0;
-      buzzerRef.current.volume = 1;
-      buzzerRef.current.play();
-    } catch (e) {
-      console.error("Buzzer play failed:", e);
-    }
-
-    setTimeoutLeft(0);
-    setActiveTimeoutTeam(null);
   };
 
   const togglePause = () => setIsRunning((prev) => !prev);
@@ -349,7 +311,7 @@ const Scoreboard = () => {
                 </h3>
 
                 <div className="d-flex justify-content-center gap-2 mt-2">
-                  <button className="btn btn-danger" onClick={handleBuzzer}>
+                  <button className="btn btn-danger">
                     <i className="fa-solid fa-bullhorn"></i>
                   </button>
                   <button className="btn btn-warning" onClick={togglePause}>
