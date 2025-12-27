@@ -40,24 +40,73 @@ const Scoreboard = () => {
   const [period, setPeriod] = useState(1);
   const [timeLeft, setTimeLeft] = useState(setup.timePerQuarter * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const timerRef = useRef(null);
 
+  /* ⏱ TIMEOUT STATE */
+  const [timeoutLeft, setTimeoutLeft] = useState(0);
+  const [activeTimeoutTeam, setActiveTimeoutTeam] = useState(null);
+
+  const timerRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  /* 🔊 BUZZER */
+  const buzzerRef = useRef(new Audio("./assets/buzzer.mp3"));
+  const buzzerUnlockedRef = useRef(false);
+
+  /* UNLOCK AUDIO ON FIRST USER CLICK */
   useEffect(() => {
-    if (isRunning) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // if time reaches zero
-            clearInterval(timerRef.current);
-            setIsRunning(false); // stop the timer
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    const unlockAudio = () => {
+      if (!buzzerUnlockedRef.current) {
+        buzzerRef.current
+          .play()
+          .then(() => {
+            buzzerRef.current.pause();
+            buzzerRef.current.currentTime = 0;
+            buzzerUnlockedRef.current = true;
+          })
+          .catch(() => {});
+      }
+      document.removeEventListener("click", unlockAudio);
+    };
+
+    document.addEventListener("click", unlockAudio);
+    return () => document.removeEventListener("click", unlockAudio);
+  }, []);
+
+  /* GAME CLOCK */
+  useEffect(() => {
+    if (!isRunning) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          setIsRunning(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => clearInterval(timerRef.current);
   }, [isRunning]);
+
+  /* TIMEOUT CLOCK */
+  useEffect(() => {
+    if (timeoutLeft <= 0) return;
+
+    timeoutRef.current = setInterval(() => {
+      setTimeoutLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timeoutRef.current);
+          setActiveTimeoutTeam(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timeoutRef.current);
+  }, [timeoutLeft]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -83,18 +132,53 @@ const Scoreboard = () => {
     );
   };
 
-  const togglePause = () => {
-    setIsRunning((prev) => !prev);
+  /* ⏸ TEAM TIMEOUT */
+  const handleTimeout = (i) => {
+    if (scores[i].timeouts === 0 || timeoutLeft > 0) return;
+
+    setIsRunning(false);
+    setActiveTimeoutTeam(i);
+    setTimeoutLeft(setup.timeoutDuration);
+
+    setScores((prev) =>
+      prev.map((t, idx) => (idx === i ? { ...t, timeouts: t.timeouts - 1 } : t))
+    );
   };
 
-  const nextQuarter = () => {
-    if (period < TOTAL_PERIODS) {
-      setPeriod((prev) => prev + 1);
-      setTimeLeft(setup.timePerQuarter * 60);
-      setIsRunning(false);
-    } else {
-      alert("All quarters completed. End the game.");
+  /* 🔊 BUZZER BUTTON */
+  const handleBuzzer = () => {
+    try {
+      buzzerRef.current.currentTime = 0;
+      buzzerRef.current.volume = 1;
+      buzzerRef.current.play();
+    } catch (e) {
+      console.error("Buzzer play failed:", e);
     }
+
+    setTimeoutLeft(0);
+    setActiveTimeoutTeam(null);
+  };
+
+  const togglePause = () => setIsRunning((prev) => !prev);
+
+  const nextQuarter = () => {
+    if (period >= TOTAL_PERIODS) {
+      alert("All quarters completed. End the game.");
+      return;
+    }
+
+    setPeriod((p) => p + 1);
+    setTimeLeft(setup.timePerQuarter * 60);
+    setIsRunning(false);
+    setTimeoutLeft(0);
+    setActiveTimeoutTeam(null);
+
+    setScores((prev) =>
+      prev.map((team) => ({
+        ...team,
+        timeouts: setup.timeoutPerQuarter,
+      }))
+    );
   };
 
   const endGame = () => {
@@ -110,13 +194,12 @@ const Scoreboard = () => {
   };
 
   const handleTimerEdit = (e) => {
-    const newTime = parseTime(e.currentTarget.innerText);
-    setTimeLeft(newTime);
+    setTimeLeft(parseTime(e.currentTarget.innerText));
   };
 
   const handlePeriodEdit = (e) => {
-    const newPeriod = parseInt(e.currentTarget.innerText) || 1;
-    setPeriod(Math.min(Math.max(newPeriod, 1), TOTAL_PERIODS));
+    const val = parseInt(e.currentTarget.innerText) || 1;
+    setPeriod(Math.min(Math.max(val, 1), TOTAL_PERIODS));
   };
 
   return (
@@ -134,26 +217,21 @@ const Scoreboard = () => {
         </button>
       </div>
 
-      {/* Timer and Period */}
       <div className="text-center">
         <h1
           className="text-warning fw-bold"
           contentEditable
           suppressContentEditableWarning
           onBlur={handleTimerEdit}
-          style={{
-            fontSize: "25rem",
-            border: "none",
-            outline: "none",
-          }}
+          style={{ fontSize: "25rem", border: "none", outline: "none" }}
         >
           {formatTime(timeLeft)}
         </h1>
       </div>
+
       <div className="d-flex gap-3 align-items-start">
         {scores.map((t, i) => (
           <React.Fragment key={i}>
-            {/* Team */}
             <div
               style={{
                 minWidth: "200px",
@@ -166,82 +244,64 @@ const Scoreboard = () => {
             >
               <h3
                 className="text-center m-0 fw-bold"
-                style={{
-                  backgroundColor: t.color,
-                  color: "white",
-                }}
+                style={{ backgroundColor: t.color, color: "white" }}
               >
                 {t.name}
               </h3>
-              <div
-                className="text-center"
-                style={{
-                  padding: ".5rem",
-                }}
-              >
+
+              <div className="text-center p-2">
                 <h4
                   className="fw-bold text-danger"
-                  contentEditable
-                  suppressContentEditableWarning
-                  style={{
-                    fontSize: "15rem",
-                    border: "none",
-                    outline: "none",
-                  }}
+                  style={{ fontSize: "15rem" }}
                 >
                   {t.score}
                 </h4>
+
                 <div className="d-flex justify-content-between">
                   <div className="d-flex gap-2 align-items-center">
-                    <h4
-                      className="fw-bold"
-                      style={{
-                        fontSize: "3rem",
-                      }}
-                    >
-                      FOULS:
-                    </h4>
-                    <h4
-                      className="fw-bold text-warning"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        fontSize: "6rem",
-                        border: "none",
-                        outline: "none",
-                      }}
-                    >
-                      {t.fouls}
-                    </h4>
-                  </div>
-                  <div className="d-flex gap-2 align-items-center">
-                    <h4
-                      className="fw-bold"
-                      style={{
-                        fontSize: "3rem",
-                      }}
-                    >
+                    <h4 className="fw-bold" style={{ fontSize: "3rem" }}>
                       TIMEOUTS:
                     </h4>
                     <h4
                       className="fw-bold text-warning"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        fontSize: "6rem",
-                        border: "none",
-                        outline: "none",
-                      }}
+                      style={{ fontSize: "6rem" }}
                     >
                       {t.timeouts}
                     </h4>
                   </div>
+
+                  <div className="d-flex gap-2 align-items-center">
+                    <h4 className="fw-bold" style={{ fontSize: "3rem" }}>
+                      FOULS:
+                    </h4>
+                    <h4
+                      className="fw-bold text-warning"
+                      style={{ fontSize: "6rem" }}
+                    >
+                      {t.fouls}
+                    </h4>
+                  </div>
                 </div>
-                <div className="justify-content-between d-flex">
-                  <button className="btn btn-outline-success fw-bold">
-                    TIMEOUT
-                  </button>
-                  <div className="d-flex justify-content-center flex-wrap gap-2">
+
+                <div className="d-flex justify-content-between">
+                  <div className="d-flex gap-2 align-items-center">
+                    <button
+                      className="btn btn-outline-success fw-bold"
+                      onClick={() => handleTimeout(i)}
+                      disabled={t.timeouts === 0 || timeoutLeft > 0}
+                    >
+                      TIMEOUT
+                    </button>
+                    <h4
+                      className="fw-bold text-warning mb-0"
+                      style={{ fontSize: "1.5rem" }}
+                      hidden={activeTimeoutTeam !== i}
+                    >
+                      {timeoutLeft}
+                    </h4>
+                  </div>
+
+                  <div className="d-flex gap-2">
                     <button
                       className="btn btn-success"
                       onClick={() => updateScore(i, 1)}
@@ -267,6 +327,7 @@ const Scoreboard = () => {
                       -1
                     </button>
                   </div>
+
                   <button className="btn btn-outline-danger fw-bold">
                     FOUL
                   </button>
@@ -274,7 +335,6 @@ const Scoreboard = () => {
               </div>
             </div>
 
-            {/* Insert period panel after first team */}
             {i === 0 && (
               <div className="text-center">
                 <h3 className="m-0 fw-bold">PERIOD</h3>
@@ -283,11 +343,15 @@ const Scoreboard = () => {
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={handlePeriodEdit}
-                  style={{ fontSize: "10rem", border: "none", outline: "none" }}
+                  style={{ fontSize: "10rem" }}
                 >
                   {period}
                 </h3>
+
                 <div className="d-flex justify-content-center gap-2 mt-2">
+                  <button className="btn btn-danger" onClick={handleBuzzer}>
+                    <i className="fa-solid fa-bullhorn"></i>
+                  </button>
                   <button className="btn btn-warning" onClick={togglePause}>
                     {isRunning ? (
                       <i className="fa-solid fa-pause"></i>
