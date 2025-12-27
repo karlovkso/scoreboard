@@ -25,3 +25,9 @@ body {
   border-color: white;
   color: #198754;
 }
+
+.std-info-modal-btn:hover {
+  background-color: white;
+  border-color: white;
+  color: #0dcaf0;
+}

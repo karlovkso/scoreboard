@@ -26,15 +26,23 @@ const Scoreboard = () => {
       name: match.team1,
       score: match.score1,
       color: setup.teams.find((t) => t.teamName === match.team1).teamColor,
-      fouls: setup.teamFouls,
+      fouls: 0,
       timeouts: setup.timeoutPerQuarter,
+      players: setup.teams
+        .find((t) => t.teamName === match.team1)
+        .teamPlayerNames.split(",")
+        .map((p) => ({ name: p.trim(), fouls: 0 })),
     },
     {
       name: match.team2,
       score: match.score2,
       color: setup.teams.find((t) => t.teamName === match.team2).teamColor,
-      fouls: setup.teamFouls,
+      fouls: 0,
       timeouts: setup.timeoutPerQuarter,
+      players: setup.teams
+        .find((t) => t.teamName === match.team2)
+        .teamPlayerNames.split(",")
+        .map((p) => ({ name: p.trim(), fouls: 0 })),
     },
   ]);
 
@@ -45,6 +53,10 @@ const Scoreboard = () => {
   /* ⏱ TIMEOUT STATE */
   const [timeoutLeft, setTimeoutLeft] = useState(0);
   const [activeTimeoutTeam, setActiveTimeoutTeam] = useState(null);
+
+  const [showFoulModal, setShowFoulModal] = useState(false);
+  const [foulTeamIndex, setFoulTeamIndex] = useState(null);
+  const [hoveredTeamIndex, setHoveredTeamIndex] = useState(null);
 
   const timerRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -58,6 +70,7 @@ const Scoreboard = () => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
           setIsRunning(false);
+          handleBuzzer();
           return 0;
         }
         return prev - 1;
@@ -76,6 +89,7 @@ const Scoreboard = () => {
         if (prev <= 1) {
           clearInterval(timeoutRef.current);
           setActiveTimeoutTeam(null);
+          handleBuzzer();
           return 0;
         }
         return prev - 1;
@@ -122,7 +136,15 @@ const Scoreboard = () => {
     );
   };
 
-  const togglePause = () => setIsRunning((prev) => !prev);
+  const togglePause = () => {
+    setIsRunning((prev) => !prev);
+
+    if (timeoutLeft > 0) {
+      clearInterval(timeoutRef.current);
+      setTimeoutLeft(0);
+      setActiveTimeoutTeam(null);
+    }
+  };
 
   const nextQuarter = () => {
     if (period >= TOTAL_PERIODS) {
@@ -140,6 +162,8 @@ const Scoreboard = () => {
       prev.map((team) => ({
         ...team,
         timeouts: setup.timeoutPerQuarter,
+        players: team.players,
+        fouls: 0,
       }))
     );
   };
@@ -169,6 +193,28 @@ const Scoreboard = () => {
     const audio = new Audio(buzzer);
     audio.volume = 1.0;
     audio.play().catch((err) => console.error("Error playing sound:", err));
+
+    if (timeoutLeft > 0) {
+      clearInterval(timeoutRef.current);
+      setTimeoutLeft(0);
+      setActiveTimeoutTeam(null);
+      setIsRunning(false); // resume game clock if you want
+    }
+  };
+
+  const handleFoul = (teamIndex, playerIdx) => {
+    setScores((prev) =>
+      prev.map((t, idx) => {
+        if (idx === teamIndex) {
+          const newPlayers = t.players.map((p, i) =>
+            i === playerIdx ? { ...p, fouls: p.fouls + 1 } : p
+          );
+          return { ...t, players: newPlayers, fouls: t.fouls + 1 };
+        }
+        return t;
+      })
+    );
+    setShowFoulModal(false);
   };
 
   return (
@@ -211,12 +257,94 @@ const Scoreboard = () => {
                 borderRadius: "10px",
               }}
             >
-              <h3
-                className="text-center m-0 fw-bold"
-                style={{ backgroundColor: t.color, color: "white" }}
-              >
-                {t.name}
-              </h3>
+              <div style={{ position: "relative" }}>
+                <h3
+                  className="text-center m-0 fw-bold"
+                  style={{ backgroundColor: t.color, color: "white" }}
+                  onMouseEnter={() => setHoveredTeamIndex(i)}
+                  onMouseLeave={() => setHoveredTeamIndex(null)}
+                >
+                  {t.name}
+                </h3>
+                {(hoveredTeamIndex === i ||
+                  t.players.some((p) => {
+                    const playerFoulsLimit = parseInt(setup.playerFouls) || 0;
+                    return (
+                      p.fouls === playerFoulsLimit - 1 ||
+                      p.fouls === playerFoulsLimit
+                    );
+                  })) && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: "0",
+                      backgroundColor: "rgba(0,0,0,0.9)",
+                      color: "white",
+                      padding: "10px",
+                      borderRadius: "5px",
+                      zIndex: 10,
+                      minWidth: "200px",
+                    }}
+                  >
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                      {hoveredTeamIndex === i
+                        ? t.players.map((p, idx) => {
+                            const playerFoulsLimit =
+                              parseInt(setup.playerFouls) || 0;
+                            const isWarning = p.fouls === playerFoulsLimit - 1;
+                            const isDanger = p.fouls === playerFoulsLimit;
+                            return (
+                              <li
+                                key={idx}
+                                className={
+                                  isWarning
+                                    ? "text-warning"
+                                    : isDanger
+                                    ? "text-danger"
+                                    : ""
+                                }
+                                style={{ marginBottom: "5px" }}
+                              >
+                                {p.name}: <span>{p.fouls}</span> fouls
+                              </li>
+                            );
+                          })
+                        : t.players
+                            .filter((p) => {
+                              const playerFoulsLimit =
+                                parseInt(setup.playerFouls) || 0;
+                              return (
+                                p.fouls === playerFoulsLimit - 1 ||
+                                p.fouls === playerFoulsLimit
+                              );
+                            })
+                            .map((p, idx) => {
+                              const playerFoulsLimit =
+                                parseInt(setup.playerFouls) || 0;
+                              const isWarning =
+                                p.fouls === playerFoulsLimit - 1;
+                              const isDanger = p.fouls === playerFoulsLimit;
+                              return (
+                                <li
+                                  key={idx}
+                                  className={
+                                    isWarning
+                                      ? "text-warning"
+                                      : isDanger
+                                      ? "text-danger"
+                                      : ""
+                                  }
+                                  style={{ marginBottom: "5px" }}
+                                >
+                                  {p.name}: <span>{p.fouls}</span> fouls
+                                </li>
+                              );
+                            })}
+                    </ul>
+                  </div>
+                )}
+              </div>
 
               <div className="text-center p-2">
                 <h4
@@ -297,7 +425,14 @@ const Scoreboard = () => {
                     </button>
                   </div>
 
-                  <button className="btn btn-outline-danger fw-bold">
+                  <button
+                    className="btn btn-outline-danger fw-bold"
+                    onClick={() => {
+                      setFoulTeamIndex(i);
+                      setShowFoulModal(true);
+                      setIsRunning(false);
+                    }}
+                  >
                     FOUL
                   </button>
                 </div>
@@ -312,17 +447,14 @@ const Scoreboard = () => {
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={handlePeriodEdit}
-                  style={{ fontSize: "10rem" }}
+                  style={{ fontSize: "10rem", border: "none", outline: "none" }}
                 >
                   {period}
                 </h3>
 
                 <div className="d-flex justify-content-center gap-2 mt-2">
-                  <button className="btn btn-danger">
-                    <i
-                      className="fa-solid fa-bullhorn"
-                      onClick={handleBuzzer}
-                    ></i>
+                  <button className="btn btn-danger" onClick={handleBuzzer}>
+                    <i className="fa-solid fa-bullhorn"></i>
                   </button>
                   <button className="btn btn-warning" onClick={togglePause}>
                     {isRunning ? (
@@ -344,6 +476,34 @@ const Scoreboard = () => {
           </React.Fragment>
         ))}
       </div>
+
+      {showFoulModal && (
+        <div className="modal" style={{ display: "block" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">WHO'S FOUL?</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowFoulModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {scores[foulTeamIndex].players.map((player, idx) => (
+                  <button
+                    key={idx}
+                    className="std-info-modal-btn btn btn-info m-1 fw-bold"
+                    onClick={() => handleFoul(foulTeamIndex, idx)}
+                  >
+                    {player.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
