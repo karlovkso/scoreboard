@@ -19,3 +19,9 @@ body {
   border-color: black;
   color: #198754;
 }
+
+.std-success-modal-btn:hover {
+  background-color: white;
+  border-color: white;
+  color: #198754;
+}

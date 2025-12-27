@@ -130,7 +130,7 @@ const Scoreboard = () => {
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container-fluid mt-4 mb-3 px-4">
       <div className="d-flex gap-2">
         <button
           className="std-btn btn btn-info fw-bold"

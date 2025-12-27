@@ -80,7 +80,7 @@ const Summary = () => {
   };
 
   return (
-    <div className="container mt-3 mb-3 position-relative">
+    <div className="container-fluid mt-4 mb-3 px-4 position-relative">
       <button
         className="std-btn btn btn-info mb-3 fw-bold"
         onClick={() => navigate("/setup")}
@@ -90,33 +90,33 @@ const Summary = () => {
 
       {/* Game Summary */}
       <p>
-        <strong>Number of Teams:</strong> {formData.teamNumber}
+        <strong>NUMBER OF TEAMS:</strong> {formData.teamNumber}
       </p>
       <div className="row mb-2">
         <div className="col-md-4">
           <p>
-            <strong>Time per Quarter:</strong> {formData.timePerQuarter} minutes
+            <strong>TIME PER QUARTER:</strong> {formData.timePerQuarter} MINUTES
           </p>
         </div>
         <div className="col-md-4">
           <p>
-            <strong>Timeout per Quarter:</strong> {formData.timeoutPerQuarter}
+            <strong>TIMEOUT PER QUARTER:</strong> {formData.timeoutPerQuarter}
           </p>
         </div>
         <div className="col-md-4">
           <p>
-            <strong>Timeout Duration:</strong> {formData.timeoutDuration}{" "}
-            seconds
+            <strong>TIMEOUT DURATION:</strong> {formData.timeoutDuration}{" "}
+            SECONDS
           </p>
         </div>
         <div className="col-md-4">
           <p>
-            <strong>Team Fouls:</strong> {formData.teamFouls}
+            <strong>TEAM FOULS:</strong> {formData.teamFouls}
           </p>
         </div>
         <div className="col-md-4">
           <p>
-            <strong>Player Fouls:</strong> {formData.playerFouls}
+            <strong>PLAYER FOULS:</strong> {formData.playerFouls}
           </p>
         </div>
       </div>
@@ -130,7 +130,7 @@ const Summary = () => {
         >
           <h5 className="fw-bold">{team.teamName}</h5>
           <p>
-            <strong>Players:</strong> {team.teamPlayerNames}
+            <strong>PLAYERS:</strong> {team.teamPlayerNames}
           </p>
         </div>
       ))}
@@ -146,7 +146,7 @@ const Summary = () => {
       {/* Match History */}
       {matchHistory.length > 0 && (
         <div className="mt-4">
-          <h4 className="fw-bold">Match History</h4>
+          <h4 className="fw-bold">MATCH HISTORY</h4>
           <ul className="list-group">
             {matchHistory.map((match, index) => (
               <li
@@ -178,7 +178,7 @@ const Summary = () => {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Select Teams to Match Up</h5>
+                <h5 className="modal-title">SELECT TEAMS TO MATCH UP</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -187,13 +187,13 @@ const Summary = () => {
               </div>
               <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Team 1</label>
+                  <label className="form-label">TEAM 1</label>
                   <select
                     className="form-select"
                     value={team1}
                     onChange={(e) => setTeam1(e.target.value)}
                   >
-                    <option value="">Select Team</option>
+                    <option value="">SELECT TEAM</option>
                     {formData.teams.map((team, idx) => (
                       <option key={idx} value={team.teamName}>
                         {team.teamName}
@@ -203,13 +203,13 @@ const Summary = () => {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Team 2</label>
+                  <label className="form-label">TEAM 2</label>
                   <select
                     className="form-select"
                     value={team2}
                     onChange={(e) => setTeam2(e.target.value)}
                   >
-                    <option value="">Select Team</option>
+                    <option value="">SELECT TEAM</option>
                     {formData.teams.map((team, idx) => (
                       <option key={idx} value={team.teamName}>
                         {team.teamName}
@@ -220,13 +220,10 @@ const Summary = () => {
               </div>
               <div className="modal-footer">
                 <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
+                  className="std-success-modal-btn btn btn-success fw-bold"
+                  onClick={handleStartGame}
                 >
-                  Close
-                </button>
-                <button className="btn btn-primary" onClick={handleStartGame}>
-                  Start Game
+                  START GAME
                 </button>
               </div>
             </div>

@@ -65,7 +65,7 @@ const Setup = () => {
   };
 
   return (
-    <div className="container mt-3 mb-3">
+    <div className="container-fluid mt-4 mb-3 px-4">
       <button
         className="std-btn btn btn-info mb-3 fw-bold"
         onClick={() => navigate("/")}
@@ -75,11 +75,11 @@ const Setup = () => {
 
       <div className="row">
         <div className="col-md-4 mb-3">
-          <label className="form-label">Time per Quarter (minutes)</label>
+          <label className="form-label">TIME PER QUARTER (MINUTES)</label>
           <input
             type="number"
             className="form-control"
-            placeholder="Time per Quarter"
+            placeholder="TIME PER QUARTER"
             name="timePerQuarter"
             value={formData.timePerQuarter}
             onChange={handleOtherChange}
@@ -87,11 +87,11 @@ const Setup = () => {
         </div>
 
         <div className="col-md-4 mb-3">
-          <label className="form-label">Timeout per Quarter</label>
+          <label className="form-label">TIMEOUT PER QUARTER</label>
           <input
             type="number"
             className="form-control"
-            placeholder="Timeout per Quarter"
+            placeholder="TIMEOUT PER QUARTER"
             name="timeoutPerQuarter"
             value={formData.timeoutPerQuarter}
             onChange={handleOtherChange}
@@ -99,11 +99,11 @@ const Setup = () => {
         </div>
 
         <div className="col-md-4 mb-3">
-          <label className="form-label">Timeout Duration (seconds)</label>
+          <label className="form-label">TIMEOUT DURATION (SECONDS)</label>
           <input
             type="number"
             className="form-control"
-            placeholder="Timeout Duration"
+            placeholder="TIMEOUT DURATION"
             name="timeoutDuration"
             value={formData.timeoutDuration}
             onChange={handleOtherChange}
@@ -113,11 +113,11 @@ const Setup = () => {
 
       <div className="row">
         <div className="col-md-6 mb-3">
-          <label className="form-label">Team Fouls</label>
+          <label className="form-label">TEAM FOULS</label>
           <input
             type="number"
             className="form-control"
-            placeholder="Team Fouls"
+            placeholder="TEAM FOULS"
             name="teamFouls"
             value={formData.teamFouls}
             onChange={handleOtherChange}
@@ -125,11 +125,11 @@ const Setup = () => {
         </div>
 
         <div className="col-md-6 mb-3">
-          <label className="form-label">Player Fouls</label>
+          <label className="form-label">PLAYER FOULS</label>
           <input
             type="number"
             className="form-control"
-            placeholder="Player Fouls"
+            placeholder="PLAYER FOULS"
             name="playerFouls"
             value={formData.playerFouls}
             onChange={handleOtherChange}
@@ -138,7 +138,7 @@ const Setup = () => {
       </div>
 
       <div className="mb-3">
-        <label className="form-label">Number of Teams</label>
+        <label className="form-label">NUMBER OF TEAMS</label>
         <input
           type="number"
           className="form-control"
@@ -150,7 +150,7 @@ const Setup = () => {
 
       {formData.teams.map((team, index) => (
         <div key={index} className="border p-3 mb-3 rounded">
-          <h5>Team {index + 1}</h5>
+          <h5>TEAM {index + 1}</h5>
 
           <input
             className="form-control mb-2"
