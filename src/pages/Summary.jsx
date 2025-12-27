@@ -51,6 +51,7 @@ const Summary = () => {
       state: {
         teams: selectedTeams,
         timePerQuarter: formData.timePerQuarter,
+        timeoutPerQuarter: formData.timeoutPerQuarter,
         timeoutDuration: formData.timeoutDuration,
         teamFouls: formData.teamFouls,
         playerFouls: formData.playerFouls,
@@ -69,6 +70,7 @@ const Summary = () => {
       state: {
         teams: selectedTeams,
         timePerQuarter: formData.timePerQuarter,
+        timeoutPerQuarter: formData.timeoutPerQuarter,
         timeoutDuration: formData.timeoutDuration,
         teamFouls: formData.teamFouls,
         playerFouls: formData.playerFouls,
@@ -87,15 +89,18 @@ const Summary = () => {
       </button>
 
       {/* Game Summary */}
+      <p>
+        <strong>Number of Teams:</strong> {formData.teamNumber}
+      </p>
       <div className="row mb-2">
         <div className="col-md-4">
           <p>
-            <strong>Number of Teams:</strong> {formData.teamNumber}
+            <strong>Time per Quarter:</strong> {formData.timePerQuarter} minutes
           </p>
         </div>
         <div className="col-md-4">
           <p>
-            <strong>Time per Quarter:</strong> {formData.timePerQuarter} minutes
+            <strong>Timeout per Quarter:</strong> {formData.timeoutPerQuarter}
           </p>
         </div>
         <div className="col-md-4">

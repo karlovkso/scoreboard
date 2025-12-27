@@ -10,6 +10,7 @@ const Setup = () => {
     teamNumber: "",
     teams: [],
     timePerQuarter: "",
+    timeoutPerQuarter: "",
     timeoutDuration: "",
     teamFouls: "",
     playerFouls: "",
@@ -73,9 +74,10 @@ const Setup = () => {
       </button>
 
       <div className="row">
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Time per Quarter</label>
+        <div className="col-md-4 mb-3">
+          <label className="form-label">Time per Quarter (minutes)</label>
           <input
+            type="number"
             className="form-control"
             placeholder="Time per Quarter"
             name="timePerQuarter"
@@ -84,9 +86,22 @@ const Setup = () => {
           />
         </div>
 
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Timeout Duration</label>
+        <div className="col-md-4 mb-3">
+          <label className="form-label">Timeout per Quarter</label>
           <input
+            type="number"
+            className="form-control"
+            placeholder="Timeout per Quarter"
+            name="timeoutPerQuarter"
+            value={formData.timeoutPerQuarter}
+            onChange={handleOtherChange}
+          />
+        </div>
+
+        <div className="col-md-4 mb-3">
+          <label className="form-label">Timeout Duration (seconds)</label>
+          <input
+            type="number"
             className="form-control"
             placeholder="Timeout Duration"
             name="timeoutDuration"
@@ -100,6 +115,7 @@ const Setup = () => {
         <div className="col-md-6 mb-3">
           <label className="form-label">Team Fouls</label>
           <input
+            type="number"
             className="form-control"
             placeholder="Team Fouls"
             name="teamFouls"
@@ -111,6 +127,7 @@ const Setup = () => {
         <div className="col-md-6 mb-3">
           <label className="form-label">Player Fouls</label>
           <input
+            type="number"
             className="form-control"
             placeholder="Player Fouls"
             name="playerFouls"
@@ -152,7 +169,7 @@ const Setup = () => {
           />
 
           <input
-            className="form-control"
+            className="form-control mb-2"
             placeholder="Player Names"
             name="teamPlayerNames"
             value={team.teamPlayerNames}
