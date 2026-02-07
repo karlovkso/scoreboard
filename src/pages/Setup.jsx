@@ -48,7 +48,7 @@ const Setup = () => {
           teams.pop();
         }
         return { ...prev, teamNumber: e.target.value, teams };
-      })(formData)
+      })(formData),
     );
   };
 
@@ -129,7 +129,7 @@ const Setup = () => {
       </div>
 
       <div className="row">
-        <div className="col-md-6 mb-3">
+        <div className="col-md-4 mb-3">
           <label className="form-label">TEAM FOULS</label>
           <input
             type="number"
