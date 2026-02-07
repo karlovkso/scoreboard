@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
+import ColorBgBtn from "../components/ColorBgBtn";
 
 const STORAGE_KEY = "setup_data";
 
@@ -15,6 +16,7 @@ const Setup = () => {
     timeoutDuration: "",
     teamFouls: "",
     playerFouls: "",
+    shotclockDuration: "",
   });
 
   useEffect(() => {
@@ -65,9 +67,17 @@ const Setup = () => {
     navigate("/summary");
   };
 
+  const selectInput = () => {
+    const input = document.querySelector(".form-control:focus");
+    if (input) {
+      input.select();
+    }
+  };
+
   return (
     <div className="container-fluid mt-4 mb-3 px-4">
       <div className="d-flex gap-2 mb-3">
+        <ColorBgBtn />
         <button
           className="std-btn btn btn-info fw-bold"
           onClick={() => navigate("/")}
@@ -87,6 +97,7 @@ const Setup = () => {
             name="timePerQuarter"
             value={formData.timePerQuarter}
             onChange={handleOtherChange}
+            onClick={selectInput}
           />
         </div>
 
@@ -99,6 +110,7 @@ const Setup = () => {
             name="timeoutPerQuarter"
             value={formData.timeoutPerQuarter}
             onChange={handleOtherChange}
+            onClick={selectInput}
           />
         </div>
 
@@ -111,6 +123,7 @@ const Setup = () => {
             name="timeoutDuration"
             value={formData.timeoutDuration}
             onChange={handleOtherChange}
+            onClick={selectInput}
           />
         </div>
       </div>
@@ -125,10 +138,11 @@ const Setup = () => {
             name="teamFouls"
             value={formData.teamFouls}
             onChange={handleOtherChange}
+            onClick={selectInput}
           />
         </div>
 
-        <div className="col-md-6 mb-3">
+        <div className="col-md-4 mb-3">
           <label className="form-label">PLAYER FOULS</label>
           <input
             type="number"
@@ -137,6 +151,20 @@ const Setup = () => {
             name="playerFouls"
             value={formData.playerFouls}
             onChange={handleOtherChange}
+            onClick={selectInput}
+          />
+        </div>
+
+        <div className="col-md-4 mb-3">
+          <label className="form-label">SHOTCLOCK DURATION (SECONDS)</label>
+          <input
+            type="number"
+            className="form-control"
+            placeholder="SHOTCLOCK DURATION"
+            name="shotclockDuration"
+            value={formData.shotclockDuration}
+            onChange={handleOtherChange}
+            onClick={selectInput}
           />
         </div>
       </div>
@@ -149,6 +177,7 @@ const Setup = () => {
           value={formData.teamNumber}
           min={1}
           onChange={handleTeamNumberChange}
+          onClick={selectInput}
         />
       </div>
 
@@ -162,6 +191,7 @@ const Setup = () => {
             name="teamName"
             value={team.teamName}
             onChange={(e) => handleTeamChange(index, e)}
+            onClick={selectInput}
           />
 
           <input
@@ -170,6 +200,7 @@ const Setup = () => {
             name="teamColor"
             value={team.teamColor}
             onChange={(e) => handleTeamChange(index, e)}
+            onClick={selectInput}
           />
 
           <input
@@ -178,6 +209,7 @@ const Setup = () => {
             name="teamPlayerNames"
             value={team.teamPlayerNames}
             onChange={(e) => handleTeamChange(index, e)}
+            onClick={selectInput}
           />
         </div>
       ))}

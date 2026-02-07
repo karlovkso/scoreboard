@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
+import ColorBgBtn from "../components/ColorBgBtn";
 
 const STORAGE_KEY = "match_history";
 
@@ -80,9 +81,15 @@ const Summary = () => {
     });
   };
 
+  const handleDeleteHistory = (index) => {
+    const updated = matchHistory.filter((_, i) => i !== index);
+    saveMatchHistory(updated);
+  };
+
   return (
     <div className="container-fluid mt-4 mb-3 px-4">
       <div className="d-flex gap-2 mb-3">
+        <ColorBgBtn />
         <button
           className="std-btn btn btn-info fw-bold"
           onClick={() => navigate("/setup")}
@@ -151,23 +158,42 @@ const Summary = () => {
             {matchHistory
               .slice()
               .reverse()
-              .map((match, index) => (
-                <li
-                  key={index}
-                  className="list-group-item list-group-item-action"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleHistoryClick(index)}
-                >
-                  <strong>{match.team1}</strong> ({match.score1}) vs{" "}
-                  <strong>{match.team2}</strong> ({match.score2})
-                  <br />
-                  <span className="text-success">
-                    {match.winner ? `Winner: ${match.winner}` : "In Progress"}
-                  </span>
-                  <br />
-                  <small className="text-muted">{match.date}</small>
-                </li>
-              ))}
+              .map((match, index) => {
+                const actualIndex = matchHistory.length - 1 - index;
+                return (
+                  <li
+                    key={actualIndex}
+                    className="list-group-item d-flex justify-content-between align-items-start list-group-item-action"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleHistoryClick(actualIndex)}
+                  >
+                    <div>
+                      <strong>{match.team1}</strong> ({match.score1}) vs{" "}
+                      <strong>{match.team2}</strong> ({match.score2})
+                      <br />
+                      <span className="text-success">
+                        {match.winner
+                          ? `Winner: ${match.winner}`
+                          : "In Progress"}
+                      </span>
+                      <br />
+                      <small className="text-muted">{match.date}</small>
+                    </div>
+
+                    <div>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteHistory(actualIndex);
+                        }}
+                      >
+                        <i class="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
           </ul>
         </div>
       )}
