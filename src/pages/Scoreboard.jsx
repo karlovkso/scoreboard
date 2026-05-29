@@ -1,8 +1,24 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
 import ColorBgBtn from "../components/ColorBgBtn";
+import MessageModal from "../components/MessageModal";
+import ScoreboardTeamCard from "../components/scoreboard/ScoreboardTeamCard";
+import ShotclockPanel from "../components/scoreboard/ShotclockPanel";
+import FoulModal from "../components/scoreboard/FoulModal";
 import buzzer from "../assets/buzzer.mp3";
+import {
+  buildInitialScores,
+  buildMatchSnapshot,
+  getConfiguredShotclockDuration,
+  getConfiguredTimeoutDuration,
+  normalizeNumericValue,
+} from "../utils/scoreboard";
+import {
+  readStoredArray,
+  readStoredObject,
+  writeStoredValue,
+} from "../utils/storage";
 
 const MATCH_KEY = "match_history";
 const SETUP_KEY = "setup_data";
@@ -13,86 +29,79 @@ const Scoreboard = () => {
   const { state } = useLocation();
   const matchIndex = state?.matchIndex;
 
-  const setup = JSON.parse(localStorage.getItem(SETUP_KEY));
-  const history = JSON.parse(localStorage.getItem(MATCH_KEY)) || [];
-
-  if (!setup || matchIndex === undefined) {
-    return <p>No game data available.</p>;
-  }
-
+  const setup = readStoredObject(SETUP_KEY, null);
+  const history = readStoredArray(MATCH_KEY, []);
   const match = history[matchIndex];
-
-  const [scores, setScores] = useState(() => {
-    const makePlayersFromSetup = (teamName) =>
-      setup.teams
-        .find((t) => t.teamName === teamName)
-        .teamPlayerNames.split(",")
-        .map((p) => ({ name: p.trim(), fouls: 0 }));
-
-    const p0 =
-      match.players && match.players[0]
-        ? match.players[0]
-        : makePlayersFromSetup(match.team1);
-    const p1 =
-      match.players && match.players[1]
-        ? match.players[1]
-        : makePlayersFromSetup(match.team2);
-
-    return [
-      {
-        name: match.team1,
-        score: typeof match.score1 === "number" ? match.score1 : 0,
-        color: setup.teams.find((t) => t.teamName === match.team1).teamColor,
-        fouls: (match.teamFouls && match.teamFouls[0]) || 0,
-        timeouts:
-          (match.teamTimeouts && match.teamTimeouts[0]) ||
-          setup.timeoutPerQuarter,
-        players: p0,
-      },
-      {
-        name: match.team2,
-        score: typeof match.score2 === "number" ? match.score2 : 0,
-        color: setup.teams.find((t) => t.teamName === match.team2).teamColor,
-        fouls: (match.teamFouls && match.teamFouls[1]) || 0,
-        timeouts:
-          (match.teamTimeouts && match.teamTimeouts[1]) ||
-          setup.timeoutPerQuarter,
-        players: p1,
-      },
-    ];
-  });
-
-  const [period, setPeriod] = useState(match.period || 1);
-  const [timeLeft, setTimeLeft] = useState(
-    typeof match.timeLeft === "number"
-      ? match.timeLeft
-      : setup.timePerQuarter * 60
+  const isGameDataAvailable = Boolean(
+    setup && typeof matchIndex === "number" && match,
   );
-  const [isRunning, setIsRunning] = useState(!!match.isRunning);
+
+  const [scores, setScores] = useState(() =>
+    isGameDataAvailable ? buildInitialScores(setup, match) : [],
+  );
+
+  const defaultTimeLeft = normalizeNumericValue(setup?.timePerQuarter, 0) * 60;
+  const configuredTimeoutDuration = getConfiguredTimeoutDuration(setup, 0);
+
+  const [period, setPeriod] = useState(match?.period || 1);
+  const [timeLeft, setTimeLeft] = useState(
+    typeof match?.timeLeft === "number" ? match.timeLeft : defaultTimeLeft,
+  );
+  const [isRunning, setIsRunning] = useState(!!match?.isRunning);
+
+  const configuredShotclockDuration = getConfiguredShotclockDuration(setup, 24);
 
   const [shotclockLeft, setShotclockLeft] = useState(
-    typeof match.shotclockLeft === "number"
+    typeof match?.shotclockLeft === "number"
       ? match.shotclockLeft
-      : setup.shotclockDuration || 24
+      : configuredShotclockDuration,
   );
   const [shotclockRunning, setShotclockRunning] = useState(
-    !!match.shotclockRunning
+    !!match?.shotclockRunning,
   );
 
   const [timeoutLeft, setTimeoutLeft] = useState(
-    typeof match.timeoutLeft === "number" ? match.timeoutLeft : 0
+    typeof match?.timeoutLeft === "number" ? match.timeoutLeft : 0,
   );
   const [activeTimeoutTeam, setActiveTimeoutTeam] = useState(
-    typeof match.activeTimeoutTeam === "number" ? match.activeTimeoutTeam : null
+    typeof match?.activeTimeoutTeam === "number"
+      ? match.activeTimeoutTeam
+      : null,
   );
 
   const [showFoulModal, setShowFoulModal] = useState(false);
   const [foulTeamIndex, setFoulTeamIndex] = useState(null);
   const [hoveredTeamIndex, setHoveredTeamIndex] = useState(null);
+  const [messageModal, setMessageModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
 
   const timerRef = useRef(null);
   const timeoutRef = useRef(null);
   const shotclockRef = useRef(null);
+
+  const openMessageDialog = (title, message) => {
+    setMessageModal({ isOpen: true, title, message });
+  };
+
+  const closeMessageDialog = () => {
+    setMessageModal({ isOpen: false, title: "", message: "" });
+  };
+
+  const handleBuzzer = useCallback(() => {
+    const audio = new Audio(buzzer);
+    audio.volume = 1.0;
+    audio.play().catch((err) => console.error("Error playing sound:", err));
+
+    if (timeoutLeft > 0) {
+      clearInterval(timeoutRef.current);
+      setTimeoutLeft(0);
+      setActiveTimeoutTeam(null);
+      setIsRunning(false);
+    }
+  }, [timeoutLeft]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -110,7 +119,7 @@ const Scoreboard = () => {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [isRunning]);
+  }, [handleBuzzer, isRunning]);
 
   useEffect(() => {
     if (timeoutLeft <= 0) return;
@@ -128,7 +137,7 @@ const Scoreboard = () => {
     }, 1000);
 
     return () => clearInterval(timeoutRef.current);
-  }, [timeoutLeft]);
+  }, [handleBuzzer, timeoutLeft]);
 
   useEffect(() => {
     if (!shotclockRunning) return;
@@ -146,7 +155,7 @@ const Scoreboard = () => {
     }, 1000);
 
     return () => clearInterval(shotclockRef.current);
-  }, [shotclockRunning]);
+  }, [handleBuzzer, shotclockRunning]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -167,8 +176,8 @@ const Scoreboard = () => {
   const updateScore = (i, delta) => {
     setScores((prev) =>
       prev.map((t, idx) =>
-        idx === i ? { ...t, score: Math.max(0, t.score + delta) } : t
-      )
+        idx === i ? { ...t, score: Math.max(0, t.score + delta) } : t,
+      ),
     );
   };
 
@@ -177,10 +186,12 @@ const Scoreboard = () => {
 
     setIsRunning(false);
     setActiveTimeoutTeam(i);
-    setTimeoutLeft(setup.timeoutDuration);
+    setTimeoutLeft(configuredTimeoutDuration);
 
     setScores((prev) =>
-      prev.map((t, idx) => (idx === i ? { ...t, timeouts: t.timeouts - 1 } : t))
+      prev.map((t, idx) =>
+        idx === i ? { ...t, timeouts: t.timeouts - 1 } : t,
+      ),
     );
   };
 
@@ -196,13 +207,13 @@ const Scoreboard = () => {
   };
 
   const resetShotclock = () => {
-    setShotclockLeft(setup.shotclockDuration || 24);
+    setShotclockLeft(configuredShotclockDuration);
     setShotclockRunning(false);
     clearInterval(shotclockRef.current);
   };
 
   const resetShotclock14 = () => {
-    setShotclockLeft(setup.shotclockDuration || 14);
+    setShotclockLeft(14);
     setShotclockRunning(false);
     clearInterval(shotclockRef.current);
   };
@@ -213,16 +224,19 @@ const Scoreboard = () => {
 
   const nextQuarter = () => {
     if (period >= TOTAL_PERIODS) {
-      alert("All quarters completed. End the game.");
+      openMessageDialog(
+        "GAME COMPLETE",
+        "All quarters completed. End the game.",
+      );
       return;
     }
 
     setPeriod((p) => p + 1);
-    setTimeLeft(setup.timePerQuarter * 60);
+    setTimeLeft(normalizeNumericValue(setup.timePerQuarter, 0) * 60);
     setIsRunning(false);
     setTimeoutLeft(0);
     setActiveTimeoutTeam(null);
-    setShotclockLeft(setup.shotclockDuration || 24);
+    setShotclockLeft(configuredShotclockDuration);
     setShotclockRunning(false);
     clearInterval(shotclockRef.current);
 
@@ -232,58 +246,42 @@ const Scoreboard = () => {
         timeouts: setup.timeoutPerQuarter,
         players: team.players,
         fouls: 0,
-      }))
+      })),
     );
+  };
+
+  const persistMatchState = (winner) => {
+    const [a, b] = scores;
+    const currentHistory = readStoredArray(MATCH_KEY, []);
+    const updatedMatch = buildMatchSnapshot({
+      match,
+      scores,
+      timeLeft,
+      shotclockLeft,
+      shotclockRunning,
+      period,
+      activeTimeoutTeam,
+      timeoutLeft,
+      isRunning,
+      winner:
+        winner ??
+        (a.score > b.score ? a.name : b.score > a.score ? b.name : null),
+    });
+
+    currentHistory[matchIndex] = updatedMatch;
+    writeStoredValue(MATCH_KEY, currentHistory);
+    navigate("/summary");
   };
 
   const endGame = () => {
     const [a, b] = scores;
-    const currentHistory = JSON.parse(localStorage.getItem(MATCH_KEY)) || [];
-    const updatedMatch = {
-      ...match,
-      score1: a.score,
-      score2: b.score,
-      winner: a.score > b.score ? a.name : b.score > a.score ? b.name : null,
-      timeLeft,
-      shotclockLeft,
-      shotclockRunning,
-      period,
-      teamTimeouts: scores.map((s) => s.timeouts),
-      teamFouls: scores.map((s) => s.fouls),
-      players: scores.map((s) => s.players),
-      activeTimeoutTeam,
-      timeoutLeft,
-      isRunning,
-      lastUpdated: new Date().toISOString(),
-    };
-    currentHistory[matchIndex] = updatedMatch;
-    localStorage.setItem(MATCH_KEY, JSON.stringify(currentHistory));
-    navigate("/summary");
+    persistMatchState(
+      a.score > b.score ? a.name : b.score > a.score ? b.name : null,
+    );
   };
 
   const handleSaveAndNavigate = () => {
-    const [a, b] = scores;
-    const currentHistory = JSON.parse(localStorage.getItem(MATCH_KEY)) || [];
-    const updatedMatch = {
-      ...match,
-      score1: a.score,
-      score2: b.score,
-      winner: null,
-      timeLeft,
-      shotclockLeft,
-      shotclockRunning,
-      period,
-      teamTimeouts: scores.map((s) => s.timeouts),
-      teamFouls: scores.map((s) => s.fouls),
-      players: scores.map((s) => s.players),
-      activeTimeoutTeam,
-      timeoutLeft,
-      isRunning,
-      lastUpdated: new Date().toISOString(),
-    };
-    currentHistory[matchIndex] = updatedMatch;
-    localStorage.setItem(MATCH_KEY, JSON.stringify(currentHistory));
-    navigate("/summary");
+    persistMatchState(null);
   };
 
   const handleTimerEdit = (e) => {
@@ -306,33 +304,24 @@ const Scoreboard = () => {
     clearInterval(shotclockRef.current);
   };
 
-  const handleBuzzer = () => {
-    const audio = new Audio(buzzer);
-    audio.volume = 1.0;
-    audio.play().catch((err) => console.error("Error playing sound:", err));
-
-    if (timeoutLeft > 0) {
-      clearInterval(timeoutRef.current);
-      setTimeoutLeft(0);
-      setActiveTimeoutTeam(null);
-      setIsRunning(false);
-    }
-  };
-
   const handleFoul = (teamIndex, playerIdx) => {
     setScores((prev) =>
       prev.map((t, idx) => {
         if (idx === teamIndex) {
           const newPlayers = t.players.map((p, i) =>
-            i === playerIdx ? { ...p, fouls: p.fouls + 1 } : p
+            i === playerIdx ? { ...p, fouls: p.fouls + 1 } : p,
           );
           return { ...t, players: newPlayers, fouls: t.fouls + 1 };
         }
         return t;
-      })
+      }),
     );
     setShowFoulModal(false);
   };
+
+  if (!isGameDataAvailable) {
+    return <p>No game data available.</p>;
+  }
 
   return (
     <div className="container-fluid mt-4 mb-3 px-4">
@@ -363,302 +352,59 @@ const Scoreboard = () => {
       </div>
 
       <div className="d-flex gap-3 align-items-start">
-        {scores.map((t, i) => (
-          <React.Fragment key={i}>
-            <div
-              style={{
-                minWidth: "200px",
-                flex: "1 1 200px",
-                borderColor: t.color,
-                borderWidth: "3px",
-                borderStyle: "solid",
-                borderRadius: "10px",
+        {scores.map((team, index) => (
+          <React.Fragment key={index}>
+            <ScoreboardTeamCard
+              team={team}
+              index={index}
+              setup={setup}
+              hoveredTeamIndex={hoveredTeamIndex}
+              setHoveredTeamIndex={setHoveredTeamIndex}
+              timeoutLeft={timeoutLeft}
+              activeTimeoutTeam={activeTimeoutTeam}
+              updateScore={updateScore}
+              handleTimeout={handleTimeout}
+              onOpenFoulModal={(teamIndex) => {
+                setFoulTeamIndex(teamIndex);
+                setShowFoulModal(true);
+                setIsRunning(false);
               }}
-            >
-              <div style={{ position: "relative" }}>
-                <h3
-                  className="text-center m-0 fw-bold"
-                  style={{ backgroundColor: t.color, color: "white" }}
-                  onMouseEnter={() => setHoveredTeamIndex(i)}
-                  onMouseLeave={() => setHoveredTeamIndex(null)}
-                >
-                  {t.name}
-                </h3>
-                {(hoveredTeamIndex === i ||
-                  t.players.some((p) => {
-                    const playerFoulsLimit = parseInt(setup.playerFouls) || 0;
-                    return (
-                      p.fouls === playerFoulsLimit - 1 ||
-                      p.fouls === playerFoulsLimit
-                    );
-                  })) && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: "0",
-                      backgroundColor: "rgba(0,0,0,0.9)",
-                      color: "white",
-                      padding: "10px",
-                      borderRadius: "5px",
-                      zIndex: 10,
-                      minWidth: "200px",
-                    }}
-                  >
-                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                      {hoveredTeamIndex === i
-                        ? t.players.map((p, idx) => {
-                            const playerFoulsLimit =
-                              parseInt(setup.playerFouls) || 0;
-                            const isWarning = p.fouls === playerFoulsLimit - 1;
-                            const isDanger = p.fouls === playerFoulsLimit;
-                            return (
-                              <li
-                                key={idx}
-                                className={
-                                  isWarning
-                                    ? "text-warning"
-                                    : isDanger
-                                    ? "text-danger"
-                                    : ""
-                                }
-                                style={{ marginBottom: "5px" }}
-                              >
-                                {p.name}: <span>{p.fouls}</span> fouls
-                              </li>
-                            );
-                          })
-                        : t.players
-                            .filter((p) => {
-                              const playerFoulsLimit =
-                                parseInt(setup.playerFouls) || 0;
-                              return (
-                                p.fouls === playerFoulsLimit - 1 ||
-                                p.fouls === playerFoulsLimit
-                              );
-                            })
-                            .map((p, idx) => {
-                              const playerFoulsLimit =
-                                parseInt(setup.playerFouls) || 0;
-                              const isWarning =
-                                p.fouls === playerFoulsLimit - 1;
-                              const isDanger = p.fouls === playerFoulsLimit;
-                              return (
-                                <li
-                                  key={idx}
-                                  className={
-                                    isWarning
-                                      ? "text-warning"
-                                      : isDanger
-                                      ? "text-danger"
-                                      : ""
-                                  }
-                                  style={{ marginBottom: "5px" }}
-                                >
-                                  {p.name}: <span>{p.fouls}</span> fouls
-                                </li>
-                              );
-                            })}
-                    </ul>
-                  </div>
-                )}
-              </div>
+            />
 
-              <div className="text-center p-2">
-                <h4
-                  className="fw-bold text-danger"
-                  style={{ fontSize: "15rem" }}
-                >
-                  {t.score}
-                </h4>
-
-                <div className="d-flex justify-content-between">
-                  <div className="d-flex gap-2 align-items-center">
-                    <h4 className="fw-bold" style={{ fontSize: "3rem" }}>
-                      TIMEOUTS:
-                    </h4>
-                    <h4
-                      className="fw-bold text-warning"
-                      style={{ fontSize: "6rem" }}
-                    >
-                      {t.timeouts}
-                    </h4>
-                  </div>
-
-                  <div className="d-flex gap-2 align-items-center">
-                    <h4 className="fw-bold" style={{ fontSize: "3rem" }}>
-                      FOULS:
-                    </h4>
-                    <h4
-                      className="fw-bold text-warning"
-                      style={{ fontSize: "6rem" }}
-                    >
-                      {t.fouls}
-                    </h4>
-                  </div>
-                </div>
-
-                <div className="d-flex justify-content-between">
-                  <div className="d-flex gap-2 align-items-center">
-                    <button
-                      className="btn btn-outline-success fw-bold"
-                      onClick={() => handleTimeout(i)}
-                      disabled={t.timeouts === 0 || timeoutLeft > 0}
-                    >
-                      TIMEOUT
-                    </button>
-                    <h4
-                      className="fw-bold text-warning mb-0"
-                      style={{ fontSize: "1.5rem" }}
-                      hidden={activeTimeoutTeam !== i}
-                    >
-                      {timeoutLeft}
-                    </h4>
-                  </div>
-
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-success"
-                      onClick={() => updateScore(i, 1)}
-                    >
-                      +1
-                    </button>
-                    <button
-                      className="btn btn-success"
-                      onClick={() => updateScore(i, 2)}
-                    >
-                      +2
-                    </button>
-                    <button
-                      className="btn btn-success"
-                      onClick={() => updateScore(i, 3)}
-                    >
-                      +3
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => updateScore(i, -1)}
-                    >
-                      -1
-                    </button>
-                  </div>
-
-                  <button
-                    className="btn btn-outline-danger fw-bold"
-                    onClick={() => {
-                      setFoulTeamIndex(i);
-                      setShowFoulModal(true);
-                      setIsRunning(false);
-                    }}
-                  >
-                    FOUL
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {i === 0 && (
-              <div className="text-center">
-                <h3 className="m-0 fw-bold">SHOTCLOCK</h3>
-                <h3
-                  className="text-warning fw-bold"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={handleShotclockEdit}
-                  style={{ fontSize: "10rem", border: "none", outline: "none" }}
-                >
-                  {shotclockLeft}
-                </h3>
-
-                <div className="d-flex justify-content-center gap-2 mt-2">
-                  <button
-                    className="btn btn-secondary fw-bold"
-                    onClick={resetShotclock14}
-                  >
-                    14
-                  </button>
-                  <button className="btn btn-warning" onClick={toggleShotclock}>
-                    {shotclockRunning ? (
-                      <i className="fa-solid fa-pause"></i>
-                    ) : (
-                      <i className="fa-solid fa-play"></i>
-                    )}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={resetShotclock}
-                  >
-                    <i className="fa-solid fa-arrow-rotate-left"></i>
-                  </button>
-                </div>
-
-                <h3 className="m-0 fw-bold mt-3">PERIOD</h3>
-                <h3
-                  className="text-warning fw-bold"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={handlePeriodEdit}
-                  style={{
-                    fontSize: "7.5rem",
-                    border: "none",
-                    outline: "none",
-                  }}
-                >
-                  {period}
-                </h3>
-
-                <div className="d-flex justify-content-center gap-2 mt-2">
-                  <button className="btn btn-danger" onClick={handleBuzzer}>
-                    <i className="fa-solid fa-bullhorn"></i>
-                  </button>
-                  <button className="btn btn-warning" onClick={togglePause}>
-                    {isRunning ? (
-                      <i className="fa-solid fa-pause"></i>
-                    ) : (
-                      <i className="fa-solid fa-play"></i>
-                    )}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={nextQuarter}
-                    disabled={period >= TOTAL_PERIODS}
-                  >
-                    <i className="fa-solid fa-forward-step"></i>
-                  </button>
-                </div>
-              </div>
+            {index === 0 && (
+              <ShotclockPanel
+                shotclockLeft={shotclockLeft}
+                shotclockRunning={shotclockRunning}
+                period={period}
+                isRunning={isRunning}
+                totalPeriods={TOTAL_PERIODS}
+                onShotclockEdit={handleShotclockEdit}
+                onPeriodEdit={handlePeriodEdit}
+                onResetShotclock14={resetShotclock14}
+                onToggleShotclock={toggleShotclock}
+                onResetShotclock={resetShotclock}
+                onTogglePause={togglePause}
+                onNextQuarter={nextQuarter}
+                onBuzzer={handleBuzzer}
+              />
             )}
           </React.Fragment>
         ))}
       </div>
 
-      {showFoulModal && (
-        <div className="modal" style={{ display: "block" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">WHO'S FOUL?</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowFoulModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                {scores[foulTeamIndex].players.map((player, idx) => (
-                  <button
-                    key={idx}
-                    className="std-info-modal-btn btn btn-info m-1 fw-bold"
-                    onClick={() => handleFoul(foulTeamIndex, idx)}
-                  >
-                    {player.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <FoulModal
+        isOpen={showFoulModal}
+        teamPlayers={scores[foulTeamIndex]?.players || []}
+        onClose={() => setShowFoulModal(false)}
+        onSelectPlayer={(playerIndex) => handleFoul(foulTeamIndex, playerIndex)}
+      />
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        title={messageModal.title}
+        message={messageModal.message}
+        onConfirm={closeMessageDialog}
+      />
     </div>
   );
 };

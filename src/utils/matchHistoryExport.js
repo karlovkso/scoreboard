@@ -1,5 +1,8 @@
 import * as XLSX from "xlsx";
 
+const DEFAULT_EXPORT_FILE_NAME = "match-history.xlsx";
+const MATCH_HISTORY_SHEET_NAME = "Match History";
+
 const normalizeCellValue = (value) => {
   if (value === null || value === undefined) return "";
 
@@ -51,29 +54,54 @@ const formatPlayersForExport = (players, team1, team2) => {
     .join(" | ");
 };
 
+const validateHistory = (history) => {
+  if (!Array.isArray(history)) {
+    throw new Error("Match history must be provided as an array.");
+  }
+
+  if (history.length === 0) {
+    throw new Error("No match history available to export.");
+  }
+
+  history.forEach((match, index) => {
+    if (match === null || typeof match !== "object") {
+      throw new Error(`Invalid match entry at index ${index}.`);
+    }
+  });
+
+  return history;
+};
+
 const buildExportRows = (history) =>
   history.map((match, index) => ({
     "Match #": index + 1,
-    "Team 1": match.team1 ?? "",
-    "Score 1": match.score1 ?? 0,
-    "Team 2": match.team2 ?? "",
-    "Score 2": match.score2 ?? 0,
-    Winner: match.winner ?? "In Progress",
+    "Team 1": normalizeCellValue(match.team1),
+    "Score 1": Number.isFinite(Number(match.score1)) ? Number(match.score1) : 0,
+    "Team 2": normalizeCellValue(match.team2),
+    "Score 2": Number.isFinite(Number(match.score2)) ? Number(match.score2) : 0,
+    Winner: normalizeCellValue(match.winner) || "In Progress",
     Status: match.winner ? "Completed" : "In Progress",
-    Date: match.date ?? "",
+    Date: normalizeCellValue(match.date),
   }));
 
 export const exportMatchHistoryToExcel = (
   history,
-  fileName = "match-history.xlsx",
+  fileName = DEFAULT_EXPORT_FILE_NAME,
 ) => {
-  if (!Array.isArray(history) || history.length === 0) {
-    throw new Error("No match history available to export.");
+  const validatedHistory = validateHistory(history);
+  const normalizedFileName =
+    typeof fileName === "string" && fileName.trim().length > 0
+      ? fileName.trim()
+      : DEFAULT_EXPORT_FILE_NAME;
+
+  try {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet(buildExportRows(validatedHistory));
+
+    XLSX.utils.book_append_sheet(workbook, sheet, MATCH_HISTORY_SHEET_NAME);
+    XLSX.writeFile(workbook, normalizedFileName);
+    return normalizedFileName;
+  } catch (error) {
+    throw new Error(`Unable to export match history: ${error.message}`);
   }
-
-  const workbook = XLSX.utils.book_new();
-  const sheet = XLSX.utils.json_to_sheet(buildExportRows(history));
-
-  XLSX.utils.book_append_sheet(workbook, sheet, "Match History");
-  XLSX.writeFile(workbook, fileName);
 };

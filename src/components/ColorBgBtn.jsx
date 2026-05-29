@@ -1,23 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { readStoredString, writeStoredValue } from "../utils/storage";
 
 const BG_COLOR_KEY = "bg_color";
 
 const ColorBgBtn = () => {
-  const [bgColor, setBgColor] = useState("#ffffff");
+  const initialColor = readStoredString(BG_COLOR_KEY, "#ffffff");
+  const [bgColor, setBgColor] = useState(initialColor);
 
   useEffect(() => {
-    const saved = localStorage.getItem(BG_COLOR_KEY);
-    if (saved) {
-      setBgColor(saved);
-      document.body.style.backgroundColor = saved;
-    }
-  }, []);
+    document.body.style.backgroundColor = bgColor;
+  }, [bgColor]);
 
   const handleColorChange = (e) => {
     const color = e.target.value;
     setBgColor(color);
-    document.body.style.backgroundColor = color;
-    localStorage.setItem(BG_COLOR_KEY, color);
+    writeStoredValue(BG_COLOR_KEY, color);
   };
 
   return (

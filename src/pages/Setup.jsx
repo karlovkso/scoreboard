@@ -1,34 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
 import ColorBgBtn from "../components/ColorBgBtn";
+import { readStoredObject, writeStoredValue } from "../utils/storage";
 
 const STORAGE_KEY = "setup_data";
+const DEFAULT_SETUP_DATA = {
+  teamNumber: "",
+  teams: [],
+  timePerQuarter: "",
+  timeoutPerQuarter: "",
+  timeoutDuration: "",
+  teamFouls: "",
+  playerFouls: "",
+  shotclockDuration: "",
+};
 
 const Setup = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    teamNumber: "",
-    teams: [],
-    timePerQuarter: "",
-    timeoutPerQuarter: "",
-    timeoutDuration: "",
-    teamFouls: "",
-    playerFouls: "",
-    shotclockDuration: "",
-  });
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      setFormData(JSON.parse(saved));
-    }
-  }, []);
+  const [formData, setFormData] = useState(() =>
+    readStoredObject(STORAGE_KEY, DEFAULT_SETUP_DATA),
+  );
 
   const persist = (data) => {
     setFormData(data);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    writeStoredValue(STORAGE_KEY, data);
   };
 
   const handleTeamNumberChange = (e) => {

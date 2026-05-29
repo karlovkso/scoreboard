@@ -2,32 +2,71 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
 import ColorBgBtn from "../components/ColorBgBtn";
+import MessageModal from "../components/MessageModal";
 import { exportMatchHistoryToExcel } from "../utils/matchHistoryExport";
+import {
+  readStoredArray,
+  readStoredObject,
+  writeStoredValue,
+} from "../utils/storage";
 
 const STORAGE_KEY = "match_history";
+const SETUP_DATA_KEY = "setup_data";
+const DEFAULT_SETUP_DATA = {
+  teamNumber: 0,
+  teams: [],
+  timePerQuarter: 0,
+  timeoutPerQuarter: 0,
+  timeoutDuration: 0,
+  teamFouls: 0,
+  playerFouls: 0,
+  shotclockDuration: 24,
+};
 
 const Summary = () => {
   const navigate = useNavigate();
-  const storedData = localStorage.getItem("setup_data");
-  const formData = storedData ? JSON.parse(storedData) : null;
+  const formData = readStoredObject(SETUP_DATA_KEY, DEFAULT_SETUP_DATA);
 
   const [showModal, setShowModal] = useState(false);
   const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
+  const [messageModal, setMessageModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
   const [team1, setTeam1] = useState("");
   const [team2, setTeam2] = useState("");
-  const [matchHistory, setMatchHistory] = useState(() => {
-    const savedHistory = localStorage.getItem(STORAGE_KEY);
-    return savedHistory ? JSON.parse(savedHistory) : [];
-  });
+  const [matchHistory, setMatchHistory] = useState(() =>
+    readStoredArray(STORAGE_KEY, []),
+  );
+
+  const showMessage = (title, message) => {
+    setMessageModal({ isOpen: true, title, message });
+  };
+
+  const closeMessage = () => {
+    setMessageModal({ isOpen: false, title: "", message: "" });
+  };
 
   const saveMatchHistory = (history) => {
     setMatchHistory(history);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    writeStoredValue(STORAGE_KEY, history);
   };
 
   const handleStartGame = () => {
     if (!team1 || !team2 || team1 === team2) {
-      alert("Please select two different teams.");
+      showMessage(
+        "TEAM SELECTION REQUIRED",
+        "Please select two different teams.",
+      );
+      return;
+    }
+
+    if (!Array.isArray(formData.teams)) {
+      showMessage(
+        "SETUP DATA MISSING",
+        "Setup data is unavailable. Please go back and configure the game.",
+      );
       return;
     }
 
@@ -86,17 +125,20 @@ const Summary = () => {
 
   const handleExportHistory = () => {
     try {
-      const savedHistory = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      const savedHistory = readStoredArray(STORAGE_KEY, []);
 
       if (savedHistory.length === 0) {
-        alert("No match history available to export.");
+        showMessage(
+          "EXPORT NOT AVAILABLE",
+          "No match history available to export.",
+        );
         return;
       }
 
       exportMatchHistoryToExcel(savedHistory, "match-history.xlsx");
     } catch (error) {
       console.error("Failed to export match history", error);
-      alert("Unable to export match history right now.");
+      showMessage("EXPORT FAILED", "Unable to export match history right now.");
     }
   };
 
@@ -336,6 +378,13 @@ const Summary = () => {
           </div>
         </div>
       )}
+
+      <MessageModal
+        isOpen={messageModal.isOpen}
+        title={messageModal.title}
+        message={messageModal.message}
+        onConfirm={closeMessage}
+      />
     </div>
   );
 };
