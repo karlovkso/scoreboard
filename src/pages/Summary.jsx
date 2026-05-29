@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import FullscreenBtn from "../components/FullscreenBtn";
 import ColorBgBtn from "../components/ColorBgBtn";
+import { exportMatchHistoryToExcel } from "../utils/matchHistoryExport";
 
 const STORAGE_KEY = "match_history";
 
@@ -11,16 +12,13 @@ const Summary = () => {
   const formData = storedData ? JSON.parse(storedData) : null;
 
   const [showModal, setShowModal] = useState(false);
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
   const [team1, setTeam1] = useState("");
   const [team2, setTeam2] = useState("");
-  const [matchHistory, setMatchHistory] = useState([]);
-
-  useEffect(() => {
+  const [matchHistory, setMatchHistory] = useState(() => {
     const savedHistory = localStorage.getItem(STORAGE_KEY);
-    if (savedHistory) {
-      setMatchHistory(JSON.parse(savedHistory));
-    }
-  }, []);
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
 
   const saveMatchHistory = (history) => {
     setMatchHistory(history);
@@ -34,7 +32,7 @@ const Summary = () => {
     }
 
     const selectedTeams = formData.teams.filter(
-      (team) => team.teamName === team1 || team.teamName === team2
+      (team) => team.teamName === team1 || team.teamName === team2,
     );
 
     const newMatch = {
@@ -65,7 +63,7 @@ const Summary = () => {
   const handleHistoryClick = (index) => {
     const match = matchHistory[index];
     const selectedTeams = formData.teams.filter(
-      (team) => team.teamName === match.team1 || team.teamName === match.team2
+      (team) => team.teamName === match.team1 || team.teamName === match.team2,
     );
 
     navigate("/scoreboard", {
@@ -84,6 +82,31 @@ const Summary = () => {
   const handleDeleteHistory = (index) => {
     const updated = matchHistory.filter((_, i) => i !== index);
     saveMatchHistory(updated);
+  };
+
+  const handleExportHistory = () => {
+    try {
+      const savedHistory = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+      if (savedHistory.length === 0) {
+        alert("No match history available to export.");
+        return;
+      }
+
+      exportMatchHistoryToExcel(savedHistory, "match-history.xlsx");
+    } catch (error) {
+      console.error("Failed to export match history", error);
+      alert("Unable to export match history right now.");
+    }
+  };
+
+  const handleClearHistory = () => {
+    setShowClearHistoryModal(true);
+  };
+
+  const handleConfirmClearHistory = () => {
+    saveMatchHistory([]);
+    setShowClearHistoryModal(false);
   };
 
   return (
@@ -153,7 +176,23 @@ const Summary = () => {
 
       {matchHistory.length > 0 && (
         <div className="mt-4">
-          <h4 className="fw-bold">MATCH HISTORY</h4>
+          <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
+            <h4 className="fw-bold mb-0">MATCH HISTORY</h4>
+            <div className="d-flex gap-2">
+              <button
+                className="std-btn btn btn-info fw-bold"
+                onClick={handleExportHistory}
+              >
+                EXPORT TO EXCEL
+              </button>
+              <button
+                className="btn btn-outline-danger fw-bold"
+                onClick={handleClearHistory}
+              >
+                CLEAR HISTORY
+              </button>
+            </div>
+          </div>
           <ul className="list-group">
             {matchHistory
               .slice()
@@ -188,7 +227,7 @@ const Summary = () => {
                           handleDeleteHistory(actualIndex);
                         }}
                       >
-                        <i class="fa-solid fa-trash-can"></i>
+                        <i className="fa-solid fa-trash-can"></i>
                       </button>
                     </div>
                   </li>
@@ -252,6 +291,45 @@ const Summary = () => {
                   onClick={handleStartGame}
                 >
                   START GAME
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearHistoryModal && (
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">CLEAR MATCH HISTORY</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowClearHistoryModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-0">
+                  Are you sure you want to clear all saved match history?
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowClearHistoryModal(false)}
+                >
+                  CANCEL
+                </button>
+                <button
+                  className="btn btn-danger fw-bold"
+                  onClick={handleConfirmClearHistory}
+                >
+                  CLEAR HISTORY
                 </button>
               </div>
             </div>
