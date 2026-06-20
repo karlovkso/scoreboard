@@ -81,6 +81,11 @@ const Scoreboard = () => {
   const timerRef = useRef(null);
   const timeoutRef = useRef(null);
   const shotclockRef = useRef(null);
+  const audioRef = useRef(new Audio(buzzer));
+
+  useEffect(() => {
+    audioRef.current.volume = 1.0;
+  }, []);
 
   const openMessageDialog = (title, message) => {
     setMessageModal({ isOpen: true, title, message });
@@ -91,9 +96,10 @@ const Scoreboard = () => {
   };
 
   const handleBuzzer = useCallback(() => {
-    const audio = new Audio(buzzer);
-    audio.volume = 1.0;
-    audio.play().catch((err) => console.error("Error playing sound:", err));
+    audioRef.current.currentTime = 0;
+    audioRef.current
+      .play()
+      .catch((err) => console.error("Error playing sound:", err));
 
     if (timeoutLeft > 0) {
       clearInterval(timeoutRef.current);
